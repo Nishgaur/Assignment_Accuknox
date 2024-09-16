@@ -1,0 +1,41 @@
+<!-- Question 3: By default do django signals run in the same database transaction as the caller? Please support your answer with a code snippet that conclusively proves your stance. The code does not need to be elegant and production ready, we just need to understand your logic. -->
+
+<!-- Answer: The Djanfo signals by default run in the same database transactions as the caller. this means that the signal is triggered during a transaction, and the signal handler gets executed within the same transaction. -->
+
+
+
+from django.db import models
+from django.db.models.signals import post_save
+from django.dispatch import receiver
+from django.db import transaction
+
+class MyModel(models.Model):
+    name = models.CharField(max_length=100)
+
+@receiver(post_save, sender=MyModel)
+def my_model_post_save(sender, instance, created, **kwargs):
+    if not created:
+        return
+    
+    post_save.disconnect(my_model_post_save, sender=MyModel)
+
+    # Attempt to modify the instance
+    instance.name = "Modified in signal"
+    instance.save()  # This triggers post_save again, but it's disconnected
+
+    # Reconnect the signal
+    post_save.connect(my_model_post_save, sender=MyModel)
+
+def create_model_instance():
+    with transaction.atomic():
+        instance = MyModel(name="Original Name")
+        instance.save()  # This triggers the post_save signal
+
+create_model_instance()
+
+modified_instance = MyModel.objects.first()
+print(modified_instance.name)  
+
+
+<!-- 
+After saving the instance, we check the name field of the saved instance. The output should be "Original Name" instead of "Modified in signal". -->

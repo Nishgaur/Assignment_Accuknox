@@ -1,0 +1,45 @@
+(* Question 1: By default are django signals executed synchronously or asynchronously? 
+ Please support your answer with a code snippet that conclusively proves your stance. 
+ The code does not need to be elegant and production ready, we just need to understand your logic.*)
+
+# Answer> The Django signals are synchronous by default as they execeuite the tasks simultaneously. Lets look at the synchronous nature using the pre_save and post_save 
+# using pre_save and post_save signals that log messages to demonstrate synchronous execution:
+
+
+# myapp/signals.py
+
+from django.db.models.signals import pre_save, post_save
+from django.dispatch import receiver
+from django.apps import apps
+
+# Get the model dynamically instead of importing directly
+MyModel = apps.get_model('myapp', 'MyModel')
+
+@receiver(pre_save, sender=MyModel)
+def pre_save_handler(sender, instance, **kwargs):
+    print(f'Pre-save signal for {instance.name}')
+
+@receiver(post_save, sender=MyModel)
+def post_save_handler(sender, instance, **kwargs):
+    print(f'Post-save signal for {instance.name}')
+
+
+#Steps to Test:
+#Create a new instance of MyModel from the Django shell:
+python manage.py shell
+
+#type in bash 
+from myapp.models import MyModel
+my_instance = MyModel.objects.create(name="Test Instance")
+In the terminal where your server is running, you'll see the following log output:
+
+
+#output shows that:
+
+#The pre_save signal handler executes before the save operation.
+#The post_save signal handler executes immediately after the save operation.
+#Both signals are fired and handled synchronously. If these signals were asynchronous, 
+#we would expect them to run in separate threads, and the print statements would not necessarily
+#appear in this strict order, nor would the operation wait for the signals to finish.
+
+#Thus, this conclusively proves that by default, Django signals are executed synchronously.
